@@ -1,0 +1,449 @@
+#!/bin/bash
+#
+# GPair is a Git Pair programming tool
+# Do pair programing with many people, from many domnain names with git.
+#
+
+# ~~~~~ Functions ~~~~~
+function show_banner {
+  echo "GPair version $APPLICATION_VERSION by zedtux under GPLv3"
+  echo
+}
+function show_version {
+  echo "$APPLICATION_VERSION"
+}
+function show_author {
+  echo "zedtux <zedtux@zedroot.org> [https://launchpad.net/~zedtux]"
+}
+function show_license {
+  echo "GPLv3 [http://gplv3.fsf.org/]"
+}
+function show_me {
+  echo " (i) I know you $CURRENT_USER_NAME as $CURRENT_USER_ALIAS"
+  echo
+}
+function show_help {
+  show_banner
+  show_me
+  echo "Usage: $APPLICATION_NAME [action] (value)"
+  echo
+  echo "Actions:"
+  echo "  alone           Define that you are now working alone for the current profile."
+  echo "  author          Show the application author."
+  echo "  for             Define the profile to use for the current pair."
+  echo "  help            Show this screen."
+  echo "  license         Show the application license"
+  echo "  list            Show all aliases."
+  echo "  list-profiles   Show the list of registered profiles."
+  echo "  list-colleagues Show the list of registered colleagues."
+  echo "  new-profile     Register a new profile."
+  echo "  new-colleague   Register a new colleague."
+  echo "  show            Show the current pairing string."
+  echo "  usage           Show usage examples."
+  echo "  version         Show the application version."
+  echo "  with            Set the colleague with you are working for the current profile."
+  echo "  whoami          Set or show who you are."
+}
+function show_usage_examples {
+  show_banner
+  echo "Usage examples"
+  echo
+  echo " # To see who you are:"
+  echo " $ $APPLICATION_NAME whoami"
+  echo
+  echo " # To define who you are:"
+  echo " $ $APPLICATION_NAME whoami '$WHOAMI_STRING_EXAMPLE'"
+  echo
+  echo " # To add a new colleague associated with the alias greg:"
+  echo " $ $APPLICATION_NAME new-colleague greg='$WHOAMI_STRING_EXAMPLE'"
+  echo
+  echo " # To add a new profile associated to the name 'free' (answer to questions):"
+  echo " $ $APPLICATION_NAME new-profile free"
+  echo
+  echo " # To see the list of registered colleagues:"
+  echo " $ $APPLICATION_NAME list-colleagues"
+  echo
+  echo " # To see the list of registered profiles:"
+  echo " $ $APPLICATION_NAME list-profiles"
+  echo
+  echo " # To set the colleague you are working with:"
+  echo " $ $APPLICATION_NAME with colleague_alias for profile_alias"
+  echo
+  echo " For example, if you are working with the colleague that is registered"
+  echo " with the alias greg, for profile registered with alias free:"
+  echo " $ $APPLICATION_NAME with greg for free"
+  echo
+  echo " To define that you're working alone:"
+  echo " $ $APPLICATION_NAME alone for profile_alias"
+  echo
+}
+function show_profiles_list {
+  if [ -f "$PROFILES_FILE" ]; then
+    while read line   
+    do
+      PROFILE_ALIAS=`echo "$line" | cut -d "=" -f1`
+      PROFILE_CONTENT=`echo "$line" | cut -d "=" -f2`
+      echo "As $PROFILE_ALIAS: $PROFILE_CONTENT"
+    done < "$PROFILES_FILE"
+  else
+    echo "You have not register any profile until now. Try \`$APPLICATION_NAME usage\` for more information."
+  fi
+}
+function show_all {
+  echo "Colleagues:"
+  show_colleagues_list
+  echo
+  echo "Profiles:"
+  show_profiles_list
+}
+function show_pair {
+  echo "Author: $GIT_AUTHOR_NAME <$GIT_AUTHOR_EMAIL>"
+  echo "Commiter: $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>"
+}
+function show_invalid_setup {
+  echo "Your setup is not valid. Please, before to continue, fix those points:"
+  echo 
+  if [[ "$CURRENT_USER_NAME" == "Unknow" ]]; then
+    echo "  * Set who you are with \`$APPLICATION_NAME whoami\`."
+    echo
+    echo "  Take a look at \`$APPLICATION_NAME usage\`"
+  fi
+}
+function whoami {
+  if [[ -z "$WHOAMI" ]]; then
+    if [[ "$CURRENT_USER_NAME" == "Unknow" ]]; then
+      echo "I currently not know who you are."
+    else
+      echo "$CURRENT_USER_NAME"
+    fi
+  else
+    echo "$WHOAMI" > "$WHOAMI_FILE"
+  fi
+}
+function check_email_address {
+  if [ -z "$EMAIL_ADDRESS" ]; then
+    echo "$ERROR_TAG You entered an empty email address."
+  else
+    validate_email="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
+    if [[ $EMAIL_ADDRESS =~ $validate_email ]]; then
+      EMAIL_ADDRESS_IS_VALID="true"
+      only_alphabetic="^[A-Za-z]+$"
+      if [[ `echo "$EMAIL_ADDRESS" | cut -d "@" -f 1` =~ $only_alphabetic ]]; then
+        EMAIL_COMPOSED="false"
+      else
+        EMAIL_COMPOSED="true"
+      fi
+      EXTRACTED_ALIAS=${EMAIL_ADDRESS%%[!a-zA-Z]*}
+      EXTRACTED_DOMAIN=`echo "$EMAIL_ADDRESS" | cut -d "@" -f 2`
+    else
+      echo "$ERROR_TAG You do not entered a valid email address."
+    fi
+  fi
+}
+# ----- Colleagues -----
+function parse_colleague_string {
+  COLLEAGUE_ALIAS=`echo "$COLLEAGUE_STRING" | cut -d "=" -f1 | tr "A-Z" "a-z"`
+  COLLEAGUE_WITHOUT_ALIAS=`echo "$COLLEAGUE_STRING" | cut -d "=" -f2`
+  COLLEAGUE_NAME=`echo $COLLEAGUE_WITHOUT_ALIAS | awk '{gsub(/^ +| +$/,"")}1'`
+  if [[ -z "$COLLEAGUE_NAME" ]] || [[ "$COLLEAGUE_NAME" == "${COLLEAGUE_NAME% *}" ]]; then
+    HAVE_ERROR=true;
+    echo "$ERROR_TAG Unable to read your colleague's name and first name."
+  fi
+}
+function check_if_colleague_alias_exists {
+  if [ -f "$COLLEAGUES_FILE" ]; then
+    if [ -z "$COLLEAGUE_STRING" ] && [ -n "$COLLEAGUE_ALIAS" ]; then
+      COLLEAGUE_STRING=$COLLEAGUE_ALIAS
+    fi
+    COLLEAGUES=`cat "$COLLEAGUES_FILE" | tr -d " " | tr "A-Z" "a-z"`
+    if [ `echo "$COLLEAGUES" | grep -e "^$COLLEAGUE_ALIAS=" | wc -l | tr -d " "` != "0" ]; then
+      COLLEAGUE_ALIAS_EXISTS="true"
+      while read line
+      do
+        if [ `echo "$line" | grep -e "^$COLLEAGUE_ALIAS=" | wc -l | tr -d " "` != "0" ]; then
+          COLLEAGUE_STRING="$line"
+          parse_colleague_string
+          break
+        fi
+      done < "$COLLEAGUES_FILE"
+    fi
+  fi
+}
+function check_if_colleague_exists {
+  if [ -f "$COLLEAGUES_FILE" ]; then
+    COLLEAGUES=`cat "$COLLEAGUES_FILE" | tr -d " " | tr "A-Z" "a-z"`
+    COLLEAGUE=`echo "$COLLEAGUE_STRING" | cut -d "=" -f2`
+    COLLEAGUE=`echo "$COLLEAGUE" | tr -d " " | tr "A-Z" "a-z"`
+    if [ `echo "$COLLEAGUES" | grep "^$COLLEAGUE=" | wc -l | tr -d " "` != "0" ]; then
+      COLLEAGUE_EXISTS=true
+    fi
+  fi
+}
+function register_colleague {
+  parse_colleague_string
+  if [ $HAVE_ERROR ]; then
+    echo "See usage examples with: \`$APPLICATION_NAME usage\`"
+  else
+    check_if_colleague_alias_exists
+    if [[ "$COLLEAGUE_ALIAS_EXISTS" == "true" ]]; then
+      echo "$ERROR_TAG The alias $COLLEAGUE_ALIAS is already associated to $COLLEAGUE_NAME"
+    else
+      check_if_colleague_exists
+      if [[ "$COLLEAGUE_EXISTS" == "true" ]]; then
+        echo "$ERROR_TAG This colleague already exist ! Check the list with \`$APPLICATION_NAME list\`"
+      else
+        echo "$COLLEAGUE_ALIAS=$COLLEAGUE_NAME" >> "$COLLEAGUES_FILE"
+        echo "Your new colleague $COLLEAGUE_NAME registered with alias $COLLEAGUE_ALIAS !"
+      fi
+    fi
+  fi
+}
+function show_colleagues_list {
+  if [ -f "$COLLEAGUES_FILE" ]; then
+    while read line   
+    do
+      COLLEAGUE_STRING="$line"
+      parse_colleague_string
+      if [ $HAVE_ERROR ]; then
+        echo "See usage examples with: \`$APPLICATION_NAME usage\`"
+      else
+        echo "As $COLLEAGUE_ALIAS: $COLLEAGUE_NAME"
+      fi
+    done < "$COLLEAGUES_FILE"
+  else
+    echo "You have not register any colleagues until now. Try \`$APPLICATION_NAME usage\` for more information."
+  fi
+}
+# ----- Profiles -----
+function check_if_profile_exists {
+  if [[ -f "$PROFILES_FILE" ]]; then
+    PROFILES=`cat "$PROFILES_FILE" | tr -d " " | tr "A-Z" "a-z"`
+    PROFILE=`echo "$PROFILE_STRING" | cut -d "=" -f2`
+    PROFILE=`echo "$PROFILE" | tr -d " " | tr "A-Z" "a-z"`
+    if [ `echo "$PROFILES" | grep "^$PROFILE=" | wc -l | tr -d " "` != "0" ]; then
+      PROFILE_EXISTS=true
+    fi
+  fi
+}
+function parse_profile_string {
+  PROFILE_ALIAS=`echo "$PROFILE_STRING" | cut -d "=" -f1 | tr "A-Z" "a-z"`
+  PROFILE_WITHOUT_ALIAS=`echo "$PROFILE_STRING" | cut -d "=" -f2`
+  EMAIL_ADDRESS=`echo $PROFILE_WITHOUT_ALIAS | awk '{gsub(/^ +| +$/,"")}1'`
+  ALIAS_FOR_PROFILE=`echo "$EMAIL_ADDRESS" | cut -d ":" -f1`
+  EMAIL_ADDRESS=`echo "$EMAIL_ADDRESS" | cut -d ":" -f2`
+  check_email_address
+  if [ $EMAIL_ADDRESS_IS_VALID ]; then
+    if [[ "$WORKING_ALONE" == "true" ]]; then
+      CURRENT_USER_ALIAS=`echo "$EMAIL_ADDRESS" | cut -d "@" -f1`
+    else
+      CURRENT_USER_ALIAS=$ALIAS_FOR_PROFILE
+    fi
+    PROFILE_DOMAIN_NAME=`echo "$EMAIL_ADDRESS" | cut -d "@" -f2`
+  fi
+  PROFILE_ALIAS_EXISTS="true"
+}
+function check_if_profile_alias_exists {
+  if [[ -f "$PROFILES_FILE" ]]; then
+    if [[ -z "$PROFILE_STRING" && -n "$PROFILE_ALIAS" ]]; then
+      PROFILE_STRING=$PROFILE_ALIAS
+    fi
+    PROFILES=`cat "$PROFILES_FILE" | tr -d " " | tr "A-Z" "a-z"`
+    if [ `echo "$PROFILES" | grep -e "^$PROFILE_ALIAS=" | wc -l | tr -d " "` != "0" ]; then
+      PROFILE_ALIAS_EXISTS="true"
+      while read line
+      do
+        if [ `echo "$line" | grep -e "^$PROFILE_ALIAS=" | wc -l | tr -d " "` != "0" ]; then
+          PROFILE_STRING="$line"
+          parse_profile_string
+          break
+        fi
+      done < "$PROFILES_FILE"
+    fi
+  fi
+}
+function register_profile {
+  check_if_profile_exists
+  if [ $PROFILE_EXISTS ]; then
+    echo "$ERROR_TAG The profile $PROFILE_STRING already exists."
+  else
+    echo "This wizard will help you to create the new profile $PROFILE_STRING."
+    echo
+    echo "Your email address will be used to get the domain name and as git author email when working alone."
+    echo "For example:"
+    echo "Given your email address is alain@example.com, when you will work alone the git author email"
+    echo "will be alain@example.com. But if you are working with greg, the git author email address will"
+    echo "be dev+greg+alain@example.com"
+    echo
+    echo "What is your email address for this profile? (i.e: alain@example.com)"
+    read EMAIL_ADDRESS
+    check_email_address
+    if [[ "$EMAIL_ADDRESS_IS_VALID" != "true" ]]; then
+      echo "$ERROR_TAG The given email address is invalid!"
+    else
+      
+      if [[ "$EMAIL_COMPOSED" == "true" ]]; then
+        echo
+        echo "I see that your email address is composed of words."
+        echo "The git author email address should not be like you'll expect when working with a colleague."
+        echo "If you are working with greg, it will be dev+greg+$EMAIL_ADDRESS."
+        echo "To fix that, you should provide me now an alias."
+        echo "For example, you should use $EXTRACTED_ALIAS to set the git author email address to dev+greg+$EXTRACTED_ALIAS@$EXTRACTED_DOMAIN"
+        echo
+        echo "What is your alias for this profile? (default: $EXTRACTED_ALIAS)"
+        read ALIAS_FOR_PROFILE
+      fi
+      [[ -z "$ALIAS_FOR_PROFILE" ]] && ALIAS_FOR_PROFILE=$EXTRACTED_ALIAS
+      
+      echo
+      echo "Result:"
+      echo "  When you will work alone the git author email address will be $EMAIL_ADDRESS"
+      echo "  When you will work with greg the git author email address will be dev+greg+$ALIAS_FOR_PROFILE@$EXTRACTED_DOMAIN"
+      echo
+      echo "Is this correct? [Yn]"
+      read ACCEPT_SETUP
+      
+      POSSIBLE_ANSWERS=( y ye yes Y YE YES )
+      for ANSWER in ${POSSIBLE_ANSWERS[@]}
+      do
+        if [[ "$ACCEPT_SETUP" == "$ANSWER" || "$ACCEPT_SETUP" == "" ]]; then
+          echo "$PROFILE_STRING=$ALIAS_FOR_PROFILE:$EMAIL_ADDRESS" >> "$PROFILES_FILE"
+          echo "Your new profile has been registered with the alias $PROFILE_STRING."
+          echo "To use it: \`gpair alone for $PROFILE_STRING\` or \`gpair with greg for $PROFILE_STRING\`."
+          break
+        fi
+      done
+    fi
+  fi
+}
+function set_working_with {
+  [[ "$SETUP_IS_INVALID" == "true" ]] && show_invalid_setup
+  [[ "$WORKING_ALONE" == "true" ]] || check_if_colleague_alias_exists
+  check_if_profile_alias_exists
+  if [[ "$COLLEAGUE_ALIAS_EXISTS" == "true" || "$WORKING_ALONE" == "true" ]] && [[ "$PROFILE_ALIAS_EXISTS" == "true" ]]; then
+    if [[ "$WORKING_ALONE" == "true" ]]; then
+      export GIT_AUTHOR_NAME="$CURRENT_USER_NAME" GIT_AUTHOR_EMAIL="$CURRENT_USER_ALIAS@$PROFILE_DOMAIN_NAME"
+    else
+      export GIT_AUTHOR_NAME="$COLLEAGUE_NAME and $CURRENT_USER_NAME" GIT_AUTHOR_EMAIL="dev+$COLLEAGUE_ALIAS+$CURRENT_USER_ALIAS@$PROFILE_DOMAIN_NAME"
+    fi
+    export GIT_COMMITTER_NAME="$CURRENT_USER_NAME" GIT_COMMITTER_EMAIL="$EMAIL_ADDRESS"
+    echo "$GIT_AUTHOR_NAME <$GIT_AUTHOR_EMAIL>"
+    if [[ "$WORKING_ALONE" == "true" ]]; then
+      GPAIRRC_CONTENT="alone for $PROFILE_ALIAS"
+    else
+      GPAIRRC_CONTENT="with $COLLEAGUE_ALIAS for $PROFILE_ALIAS"
+    fi
+    echo "$GPAIRRC_CONTENT" > "$PAIR_FILE"
+  elif [[ "$COLLEAGUE_ALIAS_EXISTS" == "false" && "$WORKING_ALONE" == "false" ]]; then
+    echo "$ERROR_TAG Unknow colleague alias $COLLEAGUE_ALIAS. To add it, check \`$APPLICATION_NAME usage\`"
+  elif [[ "$PROFILE_ALIAS_EXISTS" == "false" ]]; then
+    echo "$ERROR_TAG Unknow profile alias $PROFILE_ALIAS. To add it, check \`$APPLICATION_NAME usage\`"
+  fi
+}
+function run_gpairrc_file {
+  gpair `cat "$GPAIRRC"`
+  GPAIRRC="Done"
+}
+
+# ~~~~~ Unix cp command callback ~~~~~
+# function cd () {
+#   builtin cd $@
+#   [[ -f `pwd`/.gpairrc && `pwd` != "$HOME" ]] && gpair --gpairrc `pwd`/.gpairrc
+# }
+
+# ~~~~~ Arguments parser ~~~~~
+function gpair {
+  # ~~~~~ Configuration ~~~~~
+  APPLICATION_VERSION="1.2"
+  APPLICATION_NAME="gpair"
+  CONFIG_PATH="$HOME/.gpair/data"
+  [[ ! -d "$CONFIG_PATH/" ]] && mkdir "$CONFIG_PATH"
+  WHOAMI_STRING_EXAMPLE="Firstname Lastname"
+  WHOAMI=""
+  WHOAMI_FILE="$CONFIG_PATH/whoami"
+  COLLEAGUES_FILE="$CONFIG_PATH/colleagues"
+  PROFILES_FILE="$CONFIG_PATH/profiles"
+  PAIR_FILE="$HOME/.gpairrc"
+  CURRENT_USER_NAME="Unknow"
+  CURRENT_USER_ALIAS=""
+  DOMAIN_STRING=""
+  [[ -f "$WHOAMI_FILE" ]] && CURRENT_USER_NAME=`cat $WHOAMI_FILE | awk '{gsub(/^ +| +$/,"")}1'`
+  [[ "$CURRENT_USER_NAME" == "Unknow" ]] && SETUP_IS_INVALID="true" || SETUP_IS_INVALID="false"
+  ERROR_TAG="Error:"
+  COLLEAGUE_ALIAS=""
+  PROFILE_ALIAS=""
+  WORKING_ALONE="false"
+  COLLEAGUE_ALIAS_EXISTS="false"
+  COLLEAGUE_ALIAS=""
+  PROFILE_ALIAS_EXISTS="false"
+  PROFILE_ALIAS=""
+  CURRENT_OPTION=""
+  OPTION_ARG=""
+  GPAIRRC=""
+  GPAIRRC_CONTENT=""
+  PROFILE_EXISTS=""
+  EMAIL_ADDRESS_IS_VALID=""
+  ALIAS_FOR_PROFILE=""
+  
+  for arg
+  do
+    delim=""
+    case "$arg" in
+      --help|help) show_help; CURRENT_OPTION="$arg";;
+      --usage|usage) show_usage_examples; CURRENT_OPTION="$arg";;
+      --version|version) show_version; CURRENT_OPTION="$arg";;
+      --author|author) show_author; CURRENT_OPTION="$arg";;
+      --license|license) show_license; CURRENT_OPTION="$arg";;
+      --gpairrc|whoami|list|list-colleagues|list-profiles|new-colleague|new-profile|with|show|for) CURRENT_OPTION="$arg";;
+      alone) WORKING_ALONE="true";;
+      *)
+        OPTION_ARG="$arg"
+        case "$CURRENT_OPTION" in
+          whoami)         WHOAMI="$OPTION_ARG"; whoami;;
+          new-colleague)  COLLEAGUE_STRING="$OPTION_ARG"; register_colleague;;
+          new-profile)    PROFILE_STRING="$OPTION_ARG"; register_profile;;
+          with)           COLLEAGUE_ALIAS="$OPTION_ARG";;
+          for)            PROFILE_ALIAS="$OPTION_ARG";;
+          --gpairrc)      [[ -f "$OPTION_ARG" ]] && GPAIRRC="$OPTION_ARG"; run_gpairrc_file;;
+          *)              echo "$ERROR_TAG Unknow option $OPTION_ARG. Try \`$APPLICATION_NAME --help\`."; CURRENT_OPTION="$OPTION_ARG";;
+        esac
+        [[ -z "$GPAIRRC" ]] && [[ -n "$COLLEAGUE_ALIAS" || "$WORKING_ALONE" == "true" ]] && [[ -n "$PROFILE_ALIAS" ]] && set_working_with
+      ;;
+    esac
+  done
+  
+  case "$CURRENT_OPTION" in
+    whoami) [[ -z "$OPTION_ARG" ]] && whoami ;;
+    list) show_all;;
+    list-colleagues) show_colleagues_list;;
+    list-profiles) show_profiles_list;;
+    new-*)
+      if [[ -z "$OPTION_ARG" ]]; then
+        echo "$ERROR_TAG You must give a value for $CURRENT_OPTION action."
+        echo "Look at usage examples with: \`$APPLICATION_NAME usage\`"
+      fi
+    ;;
+    with)
+      if [[ -z "$OPTION_ARG" ]]; then
+        echo "$ERROR_TAG You must give the alias of the colleague you want to work with."
+        echo "Look at usage examples with: \`$APPLICATION_NAME usage\`"
+      fi
+    ;;
+    for)
+      if [[ -z "$OPTION_ARG" ]]; then
+        echo "$ERROR_TAG You must give the alias of the domain you want to work for."
+        echo "Look at usage examples with: \`$APPLICATION_NAME usage\`"
+      fi
+    ;;
+    show) show_pair;;
+    *)
+      if [[ -z "$CURRENT_OPTION" ]]; then
+        if [[ "$SETUP_IS_INVALID" == "true" ]]; then
+          show_invalid_setup
+        else
+          show_help
+        fi
+      fi
+    ;;
+  esac
+}
+[[ -f "$HOME/.gpairrc" ]] && gpair --gpairrc "$HOME/.gpairrc"

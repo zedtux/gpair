@@ -1,0 +1,14 @@
+#!/bin/bash
+printf "
+${name:-"${USER:-$(whoami)}"},
+
+Thank you very much for using gpair !
+I hope it helps to make your work more funny =)
+
+To finalize the installation, please insert the folowing line
+at the end of your shell's loading files
+(.bashrc or .bash_profile for bash and .zshrc for zsh):
+[[ -s $HOME/.gpair/gpair ]] && source $HOME/.gpair/gpair
+
+When it's done, CLOSE THIS SHELL and open a new one in order to use gpair.
+"
