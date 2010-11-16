@@ -18,21 +18,16 @@ function show_author {
 function show_license {
   echo "GPLv3 [http://gplv3.fsf.org/]"
 }
-function show_me {
-  echo " (i) I know you $CURRENT_USER_NAME as $CURRENT_USER_ALIAS"
-  echo
-}
 function show_help {
   show_banner
-  show_me
   echo "Usage: $APPLICATION_NAME [action] (value)"
   echo
   echo "Actions:"
   echo "  alone           Define that you are now working alone for the current profile."
-  echo "  author          Show the application author."
+  echo "  author          Show the application's author."
   echo "  for             Define the profile to use for the current pair."
   echo "  help            Show this screen."
-  echo "  license         Show the application license"
+  echo "  license         Show the application's license."
   echo "  list            Show all aliases."
   echo "  list-profiles   Show the list of registered profiles."
   echo "  list-colleagues Show the list of registered colleagues."
@@ -40,8 +35,8 @@ function show_help {
   echo "  new-colleague   Register a new colleague."
   echo "  show            Show the current pairing string."
   echo "  usage           Show usage examples."
-  echo "  version         Show the application version."
-  echo "  with            Set the colleague with you are working for the current profile."
+  echo "  version         Show the application's version."
+  echo "  with            Set the colleague with whom you are working for the current profile."
   echo "  whoami          Set or show who you are."
 }
 function show_usage_examples {
@@ -54,19 +49,17 @@ function show_usage_examples {
   echo " # To define who you are:"
   echo " $ $APPLICATION_NAME whoami '$WHOAMI_STRING_EXAMPLE'"
   echo
-  echo " # To add a new colleague associated with the alias greg:"
-  echo " $ $APPLICATION_NAME new-colleague greg='$WHOAMI_STRING_EXAMPLE'"
+  echo " # To add a new colleague associated with an alias:"
+  echo " $ $APPLICATION_NAME new-colleague alias_name='$WHOAMI_STRING_EXAMPLE'"
+  echo " -> Example: \`$APPLICATION_NAME new-colleague greg='Grégoire Clanton'\`"
   echo
-  echo " # To add a new profile associated to the name 'free' (answer to questions):"
-  echo " $ $APPLICATION_NAME new-profile free"
+  echo " # To add a new profile associated to an alias:"
+  echo " $ $APPLICATION_NAME new-profile alias_name"
   echo
-  echo " # To see the list of registered colleagues:"
-  echo " $ $APPLICATION_NAME list-colleagues"
+  echo " # To see the list of registered things:"
+  echo " $ $APPLICATION_NAME list"
   echo
-  echo " # To see the list of registered profiles:"
-  echo " $ $APPLICATION_NAME list-profiles"
-  echo
-  echo " # To set the colleague you are working with:"
+  echo " # To set the colleague whom you are working with:"
   echo " $ $APPLICATION_NAME with colleague_alias for profile_alias"
   echo
   echo " For example, if you are working with the colleague that is registered"
@@ -74,7 +67,7 @@ function show_usage_examples {
   echo " $ $APPLICATION_NAME with greg for free"
   echo
   echo " To define that you're working alone:"
-  echo " $ $APPLICATION_NAME alone for profile_alias"
+  echo " $ $APPLICATION_NAME alone for alias_name"
   echo
 }
 function show_profiles_list {
@@ -86,7 +79,8 @@ function show_profiles_list {
       echo "As $PROFILE_ALIAS: $PROFILE_CONTENT"
     done < "$PROFILES_FILE"
   else
-    echo "You have not register any profile until now. Try \`$APPLICATION_NAME usage\` for more information."
+    echo "You have not register any profile until now."
+    message_look_at_usage
   fi
 }
 function show_all {
@@ -101,12 +95,12 @@ function show_pair {
   echo "Commiter: $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>"
 }
 function show_invalid_setup {
-  echo "Your setup is not valid. Please, before to continue, fix those points:"
+  echo "Your setup is not valid. Please, before continuing, fix those points:"
   echo 
   if [[ "$CURRENT_USER_NAME" == "Unknow" ]]; then
     echo "  * Set who you are with \`$APPLICATION_NAME whoami\`."
     echo
-    echo "  Take a look at \`$APPLICATION_NAME usage\`"
+    message_look_at_usage
   fi
 }
 function whoami {
@@ -122,7 +116,7 @@ function whoami {
 }
 function check_email_address {
   if [ -z "$EMAIL_ADDRESS" ]; then
-    echo "$ERROR_TAG You entered an empty email address."
+    echo "$ERROR_TAG Given email address is empty."
   else
     validate_email="^[a-z0-9!#\$%&'*+/=?^_\`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_\`{|}~-]+)*@([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]*[a-z0-9])?\$"
     if [[ $EMAIL_ADDRESS =~ $validate_email ]]; then
@@ -136,9 +130,12 @@ function check_email_address {
       EXTRACTED_ALIAS=${EMAIL_ADDRESS%%[!a-zA-Z]*}
       EXTRACTED_DOMAIN=`echo "$EMAIL_ADDRESS" | cut -d "@" -f 2`
     else
-      echo "$ERROR_TAG You do not entered a valid email address."
+      echo "$ERROR_TAG Given email address is invalid."
     fi
   fi
+}
+function message_look_at_usage () {
+  echo "Look at usage examples with: \`$APPLICATION_NAME usage\`"
 }
 # ----- Colleagues -----
 function parse_colleague_string {
@@ -190,7 +187,7 @@ function register_colleague {
     else
       check_if_colleague_exists
       if [[ "$COLLEAGUE_EXISTS" == "true" ]]; then
-        echo "$ERROR_TAG This colleague already exist ! Check the list with \`$APPLICATION_NAME list\`"
+        echo "$ERROR_TAG This colleague already exists! Check the list with \`$APPLICATION_NAME list\`"
       else
         echo "$COLLEAGUE_ALIAS=$COLLEAGUE_NAME" >> "$COLLEAGUES_FILE"
         echo "Your new colleague $COLLEAGUE_NAME registered with alias $COLLEAGUE_ALIAS !"
@@ -211,7 +208,8 @@ function show_colleagues_list {
       fi
     done < "$COLLEAGUES_FILE"
   else
-    echo "You have not register any colleagues until now. Try \`$APPLICATION_NAME usage\` for more information."
+    echo "You have not registered any colleagues until now."
+    message_look_at_usage
   fi
 }
 # ----- Profiles -----
@@ -268,9 +266,10 @@ function register_profile {
   else
     echo "This wizard will help you to create the new profile $PROFILE_STRING."
     echo
-    echo "Your email address will be used to get the domain name and as git author email when working alone."
+    echo "Your email address will be used when working alone as the git author email address,"
+    echo "and also used to define the git author email address domain name when working with someone else."
     echo "For example:"
-    echo "Given your email address is alain@example.com, when you will work alone the git author email"
+    echo "Given your email address is alain@example.com, when you will work alone the git author email address"
     echo "will be alain@example.com. But if you are working with greg, the git author email address will"
     echo "be dev+greg+alain@example.com"
     echo
@@ -283,21 +282,21 @@ function register_profile {
       
       if [[ "$EMAIL_COMPOSED" == "true" ]]; then
         echo
-        echo "I see that your email address is composed of words."
-        echo "The git author email address should not be like you'll expect when working with a colleague."
+        echo "The given email address is made of several words."
+        echo "The git author email address will not be like you'll expect when working with a colleague."
         echo "If you are working with greg, it will be dev+greg+$EMAIL_ADDRESS."
         echo "To fix that, you should provide me now an alias."
         echo "For example, you should use $EXTRACTED_ALIAS to set the git author email address to dev+greg+$EXTRACTED_ALIAS@$EXTRACTED_DOMAIN"
         echo
-        echo "What is your alias for this profile? (default: $EXTRACTED_ALIAS)"
+        echo "Which alias would you like for this profile? (default: $EXTRACTED_ALIAS)"
         read ALIAS_FOR_PROFILE
       fi
       [[ -z "$ALIAS_FOR_PROFILE" ]] && ALIAS_FOR_PROFILE=$EXTRACTED_ALIAS
       
       echo
       echo "Result:"
-      echo "  When you will work alone the git author email address will be $EMAIL_ADDRESS"
-      echo "  When you will work with greg the git author email address will be dev+greg+$ALIAS_FOR_PROFILE@$EXTRACTED_DOMAIN"
+      echo "  When working alone the git author email address will be $EMAIL_ADDRESS"
+      echo "  When working with greg the git author email address will be dev+greg+$ALIAS_FOR_PROFILE@$EXTRACTED_DOMAIN"
       echo
       echo "Is this correct? [Yn]"
       read ACCEPT_SETUP
@@ -308,7 +307,7 @@ function register_profile {
         if [[ "$ACCEPT_SETUP" == "$ANSWER" || "$ACCEPT_SETUP" == "" ]]; then
           echo "$PROFILE_STRING=$ALIAS_FOR_PROFILE:$EMAIL_ADDRESS" >> "$PROFILES_FILE"
           echo "Your new profile has been registered with the alias $PROFILE_STRING."
-          echo "To use it: \`gpair alone for $PROFILE_STRING\` or \`gpair with greg for $PROFILE_STRING\`."
+          echo "To use it: \`$APPLICATION_NAME alone for $PROFILE_STRING\` or \`$APPLICATION_NAME with greg for $PROFILE_STRING\`."
           break
         fi
       done
@@ -334,9 +333,11 @@ function set_working_with {
     fi
     echo "$GPAIRRC_CONTENT" > "$PAIR_FILE"
   elif [[ "$COLLEAGUE_ALIAS_EXISTS" == "false" && "$WORKING_ALONE" == "false" ]]; then
-    echo "$ERROR_TAG Unknow colleague alias $COLLEAGUE_ALIAS. To add it, check \`$APPLICATION_NAME usage\`"
+    echo "$ERROR_TAG Unknow colleague alias $COLLEAGUE_ALIAS."
+    message_look_at_usage
   elif [[ "$PROFILE_ALIAS_EXISTS" == "false" ]]; then
-    echo "$ERROR_TAG Unknow profile alias $PROFILE_ALIAS. To add it, check \`$APPLICATION_NAME usage\`"
+    echo "$ERROR_TAG Unknow profile alias $PROFILE_ALIAS."
+    message_look_at_usage
   fi
 }
 function run_gpairrc_file {
@@ -419,19 +420,19 @@ function gpair {
     new-*)
       if [[ -z "$OPTION_ARG" ]]; then
         echo "$ERROR_TAG You must give a value for $CURRENT_OPTION action."
-        echo "Look at usage examples with: \`$APPLICATION_NAME usage\`"
+        message_look_at_usage
       fi
     ;;
     with)
       if [[ -z "$OPTION_ARG" ]]; then
         echo "$ERROR_TAG You must give the alias of the colleague you want to work with."
-        echo "Look at usage examples with: \`$APPLICATION_NAME usage\`"
+        message_look_at_usage
       fi
     ;;
     for)
       if [[ -z "$OPTION_ARG" ]]; then
         echo "$ERROR_TAG You must give the alias of the domain you want to work for."
-        echo "Look at usage examples with: \`$APPLICATION_NAME usage\`"
+        message_look_at_usage
       fi
     ;;
     show) show_pair;;
