@@ -137,6 +137,7 @@ VCS configuration have changed to:
 * Implement use of .gpairrc files into project's folder to set automatically the gpair configuration
 * Do not override the git configuration file (.git/config) from the project's folder if exists
 * Implement email address format definition per profile (Change the default one 'dev+...+...@.....' to something else)
+* Edit, delete profile or colleague.
 
 ## License
 
