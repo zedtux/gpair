@@ -1,4 +1,22 @@
 #!/bin/bash
+
+if [[ -s "$HOME/.rvm/scripts/rvm" ]]; then
+  echo "[!] Rvm detected."
+  if [[ ! -f "$HOME/.rvm/hooks/after_cd" ]]; then
+    echo "  Installing gpair hook into rvm..."
+    echo "[[ -f \"\$PWD/.gpairrc\" && \"\$PWD\" != \"\$HOME\" ]] && gpair --gpairrc \"\$PWD/.gpairrc\"" > "$HOME/.rvm/hooks/after_cd"
+  else
+    echo "  Checking gpair hook..."
+    gpair_hook_string="^.*\[\[\ \-f\ \"\\$\PWD\/\.gpairrc\"\ \&\&\ \"\\$\PWD\"\ \!\=\ \"\\$\HOME\"\ \]\]\ \&\&\ gpair\ \-\-gpairrc\ \"\\$\PWD\/.gpairrc\""
+    AFTER_CD_HOOK=`cat $HOME/.rvm/hooks/after_cd`
+    if [[ $AFTER_CD_HOOK =~ $gpair_hook_string ]]; then
+      echo "  Gpair hook already present. Nothing todo."
+    else
+      echo "  Adding gpair hook to $HOME/.rvm/hooks/after_cd"
+    fi
+  fi
+fi
+
 printf "
 ${name:-"${USER:-$(whoami)}"},
 

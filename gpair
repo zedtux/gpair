@@ -347,10 +347,12 @@ function run_gpairrc_file {
 }
 
 # ~~~~~ Unix cp command callback ~~~~~
-# function cd () {
-#   builtin cd $@
-#   [[ -f `pwd`/.gpairrc && `pwd` != "$HOME" ]] && gpair --gpairrc `pwd`/.gpairrc
-# }
+if [[ ! -s "$HOME/.rvm/scripts/rvm" ]]; then
+  function cd () {
+    builtin cd $@
+    [[ -f `pwd`/.gpairrc && `pwd` != "$HOME" ]] && gpair --gpairrc `pwd`/.gpairrc
+  }
+fi
 
 # ~~~~~ Arguments parser ~~~~~
 function gpair {
