@@ -30,28 +30,29 @@ And profiles:
     $ gpair new-profile durham
     This wizard will help you to create the new profile durham.
     
-    Your email address will be used to get the domain name and as git author email when working alone.
+    Your email address will be used when working alone as the git author email address,
+    and also used to define the git author email address domain name when working with someone else.
     For example:
-    Given your email address is alain@example.com, when you will work alone the git author email
+    Given your email address is alain@example.com, when you will work alone the git author email address
     will be alain@example.com. But if you are working with greg, the git author email address will
     be dev+greg+alain@example.com
     
     What is your email address for this profile? (i.e: alain@example.com)
     louis.wooten@durhamtownhouse.com
     
-    I see that your email address is composed of words.
-    The git author email address should not be like you'll expect when working with a colleague.
+    The given email address is made of several words.
+    The git author email address will not be like you'll expect when working with a colleague.
     If you are working with greg, it will be dev+greg+louis.wooten@durhamtownhouse.com.
     To fix that, you should provide me now an alias.
     For example, you should use louis to set the git author email address to dev+greg+louis@durhamtownhouse.com
     
-    What is your alias for this profile? (default: louis)
+    Which alias would you like for this profile? (default: louis)
     
     
     Result:
-      When you will work alone the git author email address will be louis.wooten@durhamtownhouse.com
-      When you will work with greg the git author email address will be dev+greg+louis@durhamtownhouse.com
-    
+      When working alone the git author email address will be louis.wooten@durhamtownhouse.com
+      When working with greg the git author email address will be dev+greg+louis@durhamtownhouse.com
+      
     Is this correct? [Yn]
     
     Your new profile has been registered with the alias durham.
