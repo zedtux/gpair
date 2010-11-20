@@ -53,8 +53,9 @@ function show_usage_examples {
   echo " $ $APPLICATION_NAME new-colleague alias_name='$WHOAMI_STRING_EXAMPLE'"
   echo " -> Example: \`$APPLICATION_NAME new-colleague greg='Grégoire Clanton'\`"
   echo
+  echo
   echo " # To add a new profile associated to an alias:"
-  echo " $ $APPLICATION_NAME new-profile alias_name"
+  echo " $ $APPLICATION_NAME new-profile profile_name"
   echo
   echo " # To see the list of registered things:"
   echo " $ $APPLICATION_NAME list"
