@@ -7,7 +7,6 @@
 # zsh autocompletion
 if [[ -n "$SHELL" ]]; then
 	USER_SHELL=$SHELL[-3,-1]
-	echo "USER_SHELL: $USER_SHELL"
 	if [[ "$USER_SHELL" == "zsh" ]]; then
 		compctl -k "(alone author for help license list list-profiles list-colleagues new-profile new-colleague show usage version with whoami)" gpair
 	fi
@@ -351,8 +350,25 @@ function set_working_with {
   fi
 }
 function run_gpairrc_file {
-  gpair `cat "$GPAIRRC"`
-  GPAIRRC="Done"
+	DO_GPAIR=1
+	GPAIR_GIT_CONFIG_PATH="$(pwd)/.git/config"
+	if [[ -f $GPAIR_GIT_CONFIG_PATH ]]; then
+		search_author=".*\[author\]"
+		search_author_name=".*\[author\].*name\ \=\ "
+		search_author_email=".*\[author\].*email\ \=\ "
+		GIT_CONFIG_FILE=`cat $GPAIR_GIT_CONFIG_PATH`
+		if [[ $GIT_CONFIG_FILE =~ $search_author ]]; then
+			if [[ $GIT_CONFIG_FILE =~ $search_author_name || $GIT_CONFIG_FILE =~ $search_author_email ]]; then
+				DO_GPAIR=0
+			fi
+		fi
+	fi
+	if [[ $DO_GPAIR == 1 ]]; then
+		gpair `cat "$GPAIRRC"`
+		GPAIRRC="Done"
+	else
+		echo "Gpair: Nothing todo as you have defined author values (from .git/config)."
+	fi
 }
 
 # ~~~~~ Unix cp command callback ~~~~~
@@ -370,9 +386,9 @@ function gpair {
   APPLICATION_NAME="gpair"
   CONFIG_PATH="$HOME/.gpair/data"
   [[ ! -d "$CONFIG_PATH/" ]] && mkdir "$CONFIG_PATH"
-  WHOAMI_STRING_EXAMPLE="Firstname Lastname"
-  WHOAMI=""
-  WHOAMI_FILE="$CONFIG_PATH/whoami"
+  GPAIR_WHOAMI_STRING_EXAMPLE="Firstname Lastname"
+  GPAIR_WHOAMI=""
+  GPAIR_WHOAMI_FILE="$CONFIG_PATH/whoami"
   COLLEAGUES_FILE="$CONFIG_PATH/colleagues"
   PROFILES_FILE="$CONFIG_PATH/profiles"
   PAIR_FILE="$HOME/.gpairrc"
