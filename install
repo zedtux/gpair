@@ -1,21 +1,29 @@
 #!/bin/bash
 
+RVM_AFTERCD_HOOK_PATH="$HOME/.rvm/hooks/after_cd"
+
+function install_rvm_hook() {
+	echo "  Installing gpair hook into rvm..."
+	touch $RVM_AFTERCD_HOOK_PATH
+	echo "[[ -f \"\$PWD/.gpairrc\" && \"\$PWD\" != \"\$HOME\" ]] && gpair --gpairrc \"\$PWD/.gpairrc\"" >> $RVM_AFTERCD_HOOK_PATH
+}
+
 if [[ -s "$HOME/.rvm/scripts/rvm" ]]; then
-  echo "[!] Rvm detected."
-  [[ -d "$HOME/.rvm/hooks" ]] || mkdir -p "$HOME/.rvm/hooks"
-  if [[ ! -f "$HOME/.rvm/hooks/after_cd" ]]; then
-    echo "  Installing gpair hook into rvm..."
-    echo "[[ -f \"\$PWD/.gpairrc\" && \"\$PWD\" != \"\$HOME\" ]] && gpair --gpairrc \"\$PWD/.gpairrc\"" > "$HOME/.rvm/hooks/after_cd"
-  else
-    echo "  Checking gpair hook..."
-    gpair_hook_string="^.*\[\[\ \-f\ \"\\$\PWD\/\.gpairrc\"\ \&\&\ \"\\$\PWD\"\ \!\=\ \"\\$\HOME\"\ \]\]\ \&\&\ gpair\ \-\-gpairrc\ \"\\$\PWD\/.gpairrc\""
-    AFTER_CD_HOOK=`cat $HOME/.rvm/hooks/after_cd`
-    if [[ $AFTER_CD_HOOK =~ $gpair_hook_string ]]; then
-      echo "  Gpair hook already present. Nothing todo."
-    else
-      echo "  Adding gpair hook to $HOME/.rvm/hooks/after_cd"
-    fi
-  fi
+	echo "[!] Rvm detected."
+	[[ -d "$HOME/.rvm/hooks" ]] || mkdir -p "$HOME/.rvm/hooks"
+	if [[ ! -f "$HOME/.rvm/hooks/after_cd" ]]; then
+		install_rvm_hook
+	else
+		echo "  Checking gpair hook..."
+		gpair_hook_string="^.*\[\[\ \-f\ \"\\$\PWD\/\.gpairrc\"\ \&\&\ \"\\$\PWD\"\ \!\=\ \"\\$\HOME\"\ \]\]\ \&\&\ gpair\ \-\-gpairrc\ \"\\$\PWD\/.gpairrc\""
+		AFTER_CD_HOOK=`cat $HOME/.rvm/hooks/after_cd`
+		if [[ $AFTER_CD_HOOK =~ $gpair_hook_string ]]; then
+			echo "  Gpair hook already present. Nothing todo."
+		else
+			echo "  Adding gpair hook to $RVM_AFTERCD_HOOK_PATH"
+			install_rvm_hook
+		fi
+	fi
 fi
 
 printf "

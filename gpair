@@ -4,6 +4,15 @@
 # Do pair programing with many people, from many domnain names with git.
 #
 
+# zsh autocompletion
+if [[ -n "$SHELL" ]]; then
+	USER_SHELL=$SHELL[-3,-1]
+	echo "USER_SHELL: $USER_SHELL"
+	if [[ "$USER_SHELL" == "zsh" ]]; then
+		compctl -k "(alone author for help license list list-profiles list-colleagues new-profile new-colleague show usage version with whoami)" gpair
+	fi
+fi
+
 # ~~~~~ Functions ~~~~~
 function show_banner {
   echo "GPair version $APPLICATION_VERSION by zedtux under GPLv3"
@@ -47,10 +56,10 @@ function show_usage_examples {
   echo " $ $APPLICATION_NAME whoami"
   echo
   echo " # To define who you are:"
-  echo " $ $APPLICATION_NAME whoami '$WHOAMI_STRING_EXAMPLE'"
+  echo " $ $APPLICATION_NAME whoami '$GPAIR_WHOAMI_STRING_EXAMPLE'"
   echo
   echo " # To add a new colleague associated with an alias:"
-  echo " $ $APPLICATION_NAME new-colleague alias_name='$WHOAMI_STRING_EXAMPLE'"
+  echo " $ $APPLICATION_NAME new-colleague alias_name='$GPAIR_WHOAMI_STRING_EXAMPLE'"
   echo " -> Example: \`$APPLICATION_NAME new-colleague greg='Grégoire Clanton'\`"
   echo
   echo
@@ -105,14 +114,14 @@ function show_invalid_setup {
   fi
 }
 function whoami {
-  if [[ -z "$WHOAMI" ]]; then
+  if [[ -z "$GPAIR_WHOAMI" ]]; then
     if [[ "$CURRENT_USER_NAME" == "Unknow" ]]; then
       echo "I currently not know who you are."
     else
       echo "$CURRENT_USER_NAME"
     fi
   else
-    echo "$WHOAMI" > "$WHOAMI_FILE"
+    echo "$GPAIR_WHOAMI" > "$GPAIR_WHOAMI_FILE"
   fi
 }
 function check_email_address {
@@ -370,7 +379,7 @@ function gpair {
   CURRENT_USER_NAME="Unknow"
   CURRENT_USER_ALIAS=""
   DOMAIN_STRING=""
-  [[ -f "$WHOAMI_FILE" ]] && CURRENT_USER_NAME=`cat $WHOAMI_FILE | awk '{gsub(/^ +| +$/,"")}1'`
+  [[ -f "$GPAIR_WHOAMI_FILE" ]] && CURRENT_USER_NAME=`cat $GPAIR_WHOAMI_FILE | awk '{gsub(/^ +| +$/,"")}1'`
   [[ "$CURRENT_USER_NAME" == "Unknow" ]] && SETUP_IS_INVALID="true" || SETUP_IS_INVALID="false"
   ERROR_TAG="Error:"
   COLLEAGUE_ALIAS=""
