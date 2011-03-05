@@ -8,7 +8,7 @@
 if [[ -n "$SHELL" ]]; then
 	USER_SHELL=$SHELL[-3,-1]
 	if [[ "$USER_SHELL" == "zsh" ]]; then
-		compctl -k "(alone author for help license list list-profiles list-colleagues new-profile new-colleague show usage version with whoami)" gpair
+		compctl -k "(alone author for help license list list-profiles list-colleagues new-profile new-colleague show usage version with whoami hook)" gpair
 	fi
 fi
 
@@ -35,6 +35,7 @@ function show_help {
   echo "  author          Show the application's author."
   echo "  for             Define the profile to use for the current pair."
   echo "  help            Show this screen."
+  echo "  hook            Install or upgrade RVM hook. (Usefull if you re-install rvm.)"
   echo "  license         Show the application's license."
   echo "  list            Show all aliases."
   echo "  list-profiles   Show the list of registered profiles."
@@ -145,6 +146,30 @@ function check_email_address {
 }
 function message_look_at_usage () {
   echo "Look at usage examples with: \`$APPLICATION_NAME usage\`"
+}
+function install_rvm_hook {
+  echo "  Installing gpair hook into rvm..."
+  touch "$RVM_AFTERCD_HOOK_PATH"
+  echo "[[ -f \"\$PWD/.gpairrc\" && \"\$PWD\" != \"\$HOME\" ]] && gpair --gpairrc \"\$PWD/.gpairrc\"" >> $RVM_AFTERCD_HOOK_PATH
+}
+function check_and_upgrade_hook {
+  if [[ -s "$HOME/.rvm/scripts/rvm" ]]; then
+    echo "[!] Rvm detected."
+    [[ -d "$HOME/.rvm/hooks" ]] || mkdir -p "$HOME/.rvm/hooks"
+    if [[ ! -f "$HOME/.rvm/hooks/after_cd" ]]; then
+      install_rvm_hook
+    else
+      echo "  Checking gpair hook..."
+      gpair_hook_string="^.*\[\[\ \-f\ \"\\$\PWD\/\.gpairrc\"\ \&\&\ \"\\$\PWD\"\ \!\=\ \"\\$\HOME\"\ \]\]\ \&\&\ gpair\ \-\-gpairrc\ \"\\$\PWD\/.gpairrc\""
+      AFTER_CD_HOOK=`cat $HOME/.rvm/hooks/after_cd`
+      if [[ $AFTER_CD_HOOK =~ $gpair_hook_string ]]; then
+        echo "  Gpair hook already present. Nothing todo."
+      else
+        echo "  Adding gpair hook to $RVM_AFTERCD_HOOK_PATH"
+        install_rvm_hook
+      fi
+    fi
+  fi
 }
 # ----- Colleagues -----
 function parse_colleague_string {
@@ -412,6 +437,7 @@ function gpair {
   PROFILE_EXISTS=""
   EMAIL_ADDRESS_IS_VALID=""
   ALIAS_FOR_PROFILE=""
+  RVM_AFTERCD_HOOK_PATH="$HOME/.rvm/hooks/after_cd"
   
   for arg
   do
@@ -422,7 +448,7 @@ function gpair {
       --version|version) show_version; CURRENT_OPTION="$arg";;
       --author|author) show_author; CURRENT_OPTION="$arg";;
       --license|license) show_license; CURRENT_OPTION="$arg";;
-      --gpairrc|whoami|list|list-colleagues|list-profiles|new-colleague|new-profile|with|show|for) CURRENT_OPTION="$arg";;
+      --gpairrc|whoami|list|list-colleagues|list-profiles|new-colleague|new-profile|with|show|for|hook) CURRENT_OPTION="$arg";;
       alone) WORKING_ALONE="true";;
       *)
         OPTION_ARG="$arg"
@@ -464,6 +490,7 @@ function gpair {
       fi
     ;;
     show) show_pair;;
+    hook) check_and_upgrade_hook;;
     *)
       if [[ -z "$CURRENT_OPTION" ]]; then
         if [[ "$SETUP_IS_INVALID" == "true" ]]; then
