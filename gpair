@@ -8,7 +8,7 @@
 if [[ -n "$SHELL" ]]; then
 	USER_SHELL=$SHELL[-3,-1]
 	if [[ "$USER_SHELL" == "zsh" ]]; then
-		compctl -k "(alone author for help license list list-profiles list-colleagues new-profile new-colleague show usage version with whoami hook)" gpair
+		compctl -k "(alone author for help license list list-profiles list-colleagues new-profile new-colleague show usage version with whoami hook forever)" gpair
 	fi
 fi
 
@@ -34,6 +34,7 @@ function show_help {
   echo "  alone           Define that you are now working alone for the current profile."
   echo "  author          Show the application's author."
   echo "  for             Define the profile to use for the current pair."
+  echo "  forever         Write passing configuration into a gpairrc file."
   echo "  help            Show this screen."
   echo "  hook            Install or upgrade RVM hook. (Usefull if you re-install rvm.)"
   echo "  license         Show the application's license."
@@ -78,6 +79,9 @@ function show_usage_examples {
   echo
   echo " To define that you're working alone:"
   echo " $ $APPLICATION_NAME alone for alias_name"
+  echo
+  echo " If now you want to save forever (or until you change it) a configuration:"
+  echo " $ $APPLICATION_NAME alone for alias_name forever"
   echo
 }
 function show_profiles_list {
@@ -144,7 +148,7 @@ function check_email_address {
     fi
   fi
 }
-function message_look_at_usage () {
+function message_look_at_usage {
   echo "Look at usage examples with: \`$APPLICATION_NAME usage\`"
 }
 function install_rvm_hook {
@@ -170,6 +174,9 @@ function check_and_upgrade_hook {
       fi
     fi
   fi
+}
+function write_configuration {
+  echo "$GPAIR_ARGS" > "`pwd`/.gpairrc"
 }
 # ----- Colleagues -----
 function parse_colleague_string {
@@ -400,7 +407,7 @@ function run_gpairrc_file {
 if [[ ! -s "$HOME/.rvm/scripts/rvm" ]]; then
   function cd () {
     builtin cd $@
-    [[ -f `pwd`/.gpairrc && `pwd` != "$HOME" ]] && gpair --gpairrc `pwd`/.gpairrc
+    [[ -f "`pwd`/.gpairrc" && "`pwd`" != "$HOME" ]] && gpair --gpairrc "`pwd`/.gpairrc"
   }
 fi
 
@@ -438,17 +445,21 @@ function gpair {
   EMAIL_ADDRESS_IS_VALID=""
   ALIAS_FOR_PROFILE=""
   RVM_AFTERCD_HOOK_PATH="$HOME/.rvm/hooks/after_cd"
+  GPAIR_ARGS=""
+  
+  search_slash=".*\/.*"
   
   for arg
   do
-    delim=""
+    # Save arguments for forever switch
+    [[ $arg =~ $search_slash ]] || [[ "$arg" == "--gpairrc" ]] || [[ "$arg" == "forever" ]] || GPAIR_ARGS="$GPAIR_ARGS $arg"
     case "$arg" in
       --help|help) show_help; CURRENT_OPTION="$arg";;
       --usage|usage) show_usage_examples; CURRENT_OPTION="$arg";;
       --version|version) show_version; CURRENT_OPTION="$arg";;
       --author|author) show_author; CURRENT_OPTION="$arg";;
       --license|license) show_license; CURRENT_OPTION="$arg";;
-      --gpairrc|whoami|list|list-colleagues|list-profiles|new-colleague|new-profile|with|show|for|hook) CURRENT_OPTION="$arg";;
+      --gpairrc|whoami|list|list-colleagues|list-profiles|new-colleague|new-profile|with|show|for|hook|forever) CURRENT_OPTION="$arg";;
       alone) WORKING_ALONE="true";;
       *)
         OPTION_ARG="$arg"
@@ -491,6 +502,7 @@ function gpair {
     ;;
     show) show_pair;;
     hook) check_and_upgrade_hook;;
+    forever) write_configuration;;
     *)
       if [[ -z "$CURRENT_OPTION" ]]; then
         if [[ "$SETUP_IS_INVALID" == "true" ]]; then
