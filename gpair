@@ -453,7 +453,7 @@ function gpair {
       *)
         OPTION_ARG="$arg"
         case "$CURRENT_OPTION" in
-          whoami)         WHOAMI="$OPTION_ARG"; whoami;;
+          whoami)         GPAIR_WHOAMI="$OPTION_ARG"; whoami;;
           new-colleague)  COLLEAGUE_STRING="$OPTION_ARG"; register_colleague;;
           new-profile)    PROFILE_STRING="$OPTION_ARG"; register_profile;;
           with)           COLLEAGUE_ALIAS="$OPTION_ARG";;
