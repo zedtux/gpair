@@ -181,7 +181,7 @@ function check_and_upgrade_hook {
   fi
 }
 function write_configuration {
-  echo "$GPAIR_ARGS" >! "`pwd`/.gpairrc"
+  echo "$GPAIR_ARGS" > "`pwd`/.gpairrc"
 }
 # ----- Colleagues -----
 function parse_colleague_string {
@@ -377,7 +377,7 @@ function set_working_with {
     else
       GPAIRRC_CONTENT="with $COLLEAGUE_ALIAS for $PROFILE_ALIAS"
     fi
-    echo "$GPAIRRC_CONTENT" >! "$PAIR_FILE"
+    echo "$GPAIRRC_CONTENT" > "$PAIR_FILE"
   elif [[ "$COLLEAGUE_ALIAS_EXISTS" == "false" && "$WORKING_ALONE" == "false" ]]; then
     echo "$ERROR_TAG Unknow colleague alias $COLLEAGUE_ALIAS."
     message_look_at_usage
