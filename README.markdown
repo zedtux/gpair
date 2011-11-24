@@ -2,6 +2,19 @@
 
 gpair is a bash script that will help you to manage different identities for your commits with git (bazaar will be added soon).
 
+# RVM compatibility
+
+You are using RVM? Then gpair can automagically switch to defined identity !
+In a project, use gpair with `forever` option in order to create a `.gpairrc` file in your project:
+
+    $ pwd
+    /Users/zedtux/Developments/my_awesome_project/
+    $ gpair with john for company forever
+    John Doe and Guillaume Hain <dev+john+guillaume@company.ltd>
+    $ cd ..
+    $ cd my_awesome_project
+    John Doe and Guillaume Hain <dev+john+guillaume@company.ltd>
+
 ## Installation ##
 
 To install gpair, simply run:
