@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.github.com/zedtux/gpair/master/media/developpeur_breton_logo.png" alt="Je suis un developpeyr Breton!"/>
+</p>
+
 # Gpair - Pair programming tool for git #
 
 gpair is a bash script that will help you to manage different identities for your commits with git (bazaar will be added soon).
