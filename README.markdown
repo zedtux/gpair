@@ -29,7 +29,7 @@ or do it manually:
 
     $ mkdir "$HOME/.gpair"
     $ cd "$HOME/.gpair"
-    $ git clone git://github.com/zedtux/gpair.git .
+    $ git clone https://github.com/zedtux/gpair.git .
     $ chmod +x "$PWD/install" && exec "$PWD/install"
 
 ## Usage ##
